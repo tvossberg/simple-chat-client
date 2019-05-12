@@ -1,21 +1,21 @@
 import java.util.Set;
 
 public class Chat {
-    public Chat(long id, Set<Long> participants) {
+    public Chat(Long id, Set<Long> participantIds) {
         this.id = id;
-        this.participants = participants;
+        this.participantIds = participantIds;
     }
 
-    private final long id;
+    private final Long id;
 
-    private final Set<Long> participants;
+    private final Set<Long> participantIds;
 
-    public long getId() {
+    public Long getId() {
         return id;
     }
 
-    public Set<Long> getParticipants() {
-        return participants;
+    public Set<Long> getParticipantIds() {
+        return participantIds;
     }
 
     @Override
@@ -26,13 +26,21 @@ public class Chat {
         Chat chat = (Chat) o;
 
         if (id != chat.id) return false;
-        return participants.equals(chat.participants);
+        return participantIds.equals(chat.participantIds);
     }
 
     @Override
     public int hashCode() {
-        int result = (int) (id ^ (id >>> 32));
-        result = 31 * result + participants.hashCode();
+        int result = id != null ? id.hashCode() : 0;
+        result = 31 * result + (participantIds != null ? participantIds.hashCode() : 0);
         return result;
+    }
+
+    @Override
+    public String toString() {
+        return "Chat{" +
+                "id=" + id +
+                ", participantIds=" + participantIds +
+                '}';
     }
 }
