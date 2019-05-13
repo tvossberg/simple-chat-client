@@ -1,6 +1,7 @@
 
 import com.google.gson.Gson;
 
+import java.io.FileReader;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -23,6 +24,11 @@ public class Server {
     private static final String OK_RESPONSE = INITIAL_HEADERS +
             "\r\n";
 
+    private final ChatService chatService;
+
+    private Server(ChatService chatService){
+        this.chatService = chatService;
+    }
 
     private static String generateRequest(String body){
         String output = "HTTP/1.1 200 OK\r\n";
@@ -34,9 +40,14 @@ public class Server {
         return output;
     }
 
+
     @SuppressWarnings("unused")
     public static void main(String[] args) throws IOException {
+        Server server = new Server(new ChatService());
+        server.run();
+    }
 
+    private void run() throws IOException {
         Selector selector = Selector.open(); // selector is open here
 
         ServerSocketChannel socket = ServerSocketChannel.open();
@@ -47,7 +58,7 @@ public class Server {
         socket.configureBlocking(false);
 
         int ops = socket.validOps();
-        SelectionKey selectKy = socket.register(selector, ops, null);
+        socket.register(selector, ops, null);
 
         while (true) {
 
@@ -135,7 +146,7 @@ public class Server {
         }
     }
 
-    private static String handle(String request) {
+    private String handle(String request) {
         if(request.contains("POST")){
             if(request.contains("messages")){
                 long chatId = Long.parseLong(request.split("/")[2]);
@@ -145,28 +156,26 @@ public class Server {
                 Message message = gson.fromJson(foo, Message.class);
                 log(message.toString());
                 log("Creating message");
-                return  generateRequest(gson.toJson(message));
+                return  generateRequest(gson.toJson(chatService.create(message)));
             }else{
                 String foo = request.substring(request.indexOf("{"));
                 log(foo);
                 Chat chat = gson.fromJson(foo, Chat.class);
-                Chat chat1 = new Chat(1L, chat.getParticipantIds());
-                log(chat.toString());
                 //Create a chat between two users
                 log("Creating chat between two users");
-                return  generateRequest(gson.toJson(chat1));
+                return  generateRequest(gson.toJson(chatService.create(chat)));
             }
         }else if (request.contains("GET")){
             if(request.contains("messages")){
                 //list messages
                 long chatId = Long.parseLong(request.split("/")[2]);
                 log("retrieving messages for chat " +chatId);
-                List<Message> messages = getMessages(chatId);
+                List<Message> messages = chatService.getMessages(chatId);
                 return  generateRequest(gson.toJson(messages));
             }else{
                 long userId = Long.parseLong(request.split("=")[1].split(" ")[0]);
                 log("list user's current chats for user "+ userId);
-                List<Chat> chats = Arrays.asList(defaultChat());
+                List<Chat> chats = Arrays.asList(chatService.getChat(userId));
                 return generateRequest(gson.toJson(chats));
             }
         }
@@ -174,17 +183,7 @@ public class Server {
         return generateRequest("");
     }
 
-    private static Chat defaultChat() {
-        return new Chat(1L, new HashSet<>());
-    }
 
-    private static List<Message> getMessages(long chatId) {
-        return Arrays.asList(defaultMessage());
-    }
-
-    private static Message defaultMessage() {
-        return new Message(1L,1L,1L,"Hello!");
-    }
 
     private static void log(String str) {
         System.out.println(str);
